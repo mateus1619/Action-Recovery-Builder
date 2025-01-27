@@ -16,6 +16,10 @@ on:
         description: Device, kernel, and vendor repositories (comma-separated)
         required: true
         default: "<device_tree_url>,<kernel_url>,<vendor_url>"
+      DEVICE_BRANCHES:
+        description: Branches for device tree, kernel, and vendor repositories (comma-separated)
+        required: true
+        default: "<device_tree_branch>,<kernel_branch>,<vendor_branch>"
       DEVICE_PATH:
         description: Path to the device tree
         required: true
@@ -60,9 +64,10 @@ jobs:
       - name: Clone device, kernel, and vendor
         run: |
           IFS=',' read -r DEVICE_TREE_URL KERNEL_SOURCE VENDOR_SOURCE <<< "${{ inputs.DEVICE_REPO }}"
-          git clone $DEVICE_TREE_URL workspace/${{ inputs.DEVICE_PATH }}
-          git clone $KERNEL_SOURCE workspace/${{ inputs.KERNEL_PATH }}
-          git clone $VENDOR_SOURCE workspace/${{ inputs.VENDOR_PATH }}
+          IFS=',' read -r DEVICE_TREE_BRANCH KERNEL_BRANCH VENDOR_BRANCH <<< "${{ inputs.DEVICE_BRANCHES }}"
+          git clone -b $DEVICE_TREE_BRANCH $DEVICE_TREE_URL workspace/${{ inputs.DEVICE_PATH }}
+          git clone -b $KERNEL_BRANCH $KERNEL_SOURCE workspace/${{ inputs.KERNEL_PATH }}
+          git clone -b $VENDOR_BRANCH $VENDOR_SOURCE workspace/${{ inputs.VENDOR_PATH }}
 
       - name: Sync ROM dependencies
         run: |
