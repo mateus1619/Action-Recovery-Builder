@@ -1,0 +1,91 @@
+name: Build Android ROM
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANIFEST_BRANCH:
+        description: Select the Android version
+        required: true
+        default: 17.1
+        options:
+        - 17.1
+      DEVICE_NAME:
+        description: Codename of the device
+        required: true
+      DEVICE_TREE_URL:
+        description: URL of the device tree repository
+        required: true
+      DEVICE_PATH:
+        description: Path to the device tree
+        required: true
+        default: device/<vendor>/<device>
+      KERNEL_SOURCE:
+        description: Kernel source repository URL
+        required: true
+      KERNEL_PATH:
+        description: Path to kernel source
+        required: true
+        default: kernel/<vendor>/<device>
+      VENDOR_SOURCE:
+        description: Vendor tree repository URL
+        required: true
+      VENDOR_PATH:
+        description: Path to vendor tree
+        required: true
+        default: vendor/<vendor>/<device>
+
+jobs:
+  build-rom:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up environment
+        run: |
+          sudo apt update && sudo apt install -y \
+            bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick \
+            lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev \
+            libxml2 libxml2-utils lzop openjdk-11-jdk pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+
+      - name: Initialize repo
+        run: |
+          if [[ "${{ inputs.MANIFEST_BRANCH }}" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            repo init --depth=1 -u https://github.com/lineageos/android.git -b lineage-${{ inputs.MANIFEST_BRANCH }}
+          else
+            echo "Invalid MANIFEST_BRANCH provided" >&2
+            exit 1
+          fi
+        working-directory: workspace
+
+      - name: Sync source
+        run: repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+        working-directory: workspace
+
+      - name: Clone device tree
+        run: |
+          git clone ${{ inputs.DEVICE_TREE_URL }} workspace/${{ inputs.DEVICE_PATH }}
+          git clone ${{ inputs.KERNEL_SOURCE }} workspace/${{ inputs.KERNEL_PATH }}
+          git clone ${{ inputs.VENDOR_SOURCE }} workspace/${{ inputs.VENDOR_PATH }}
+
+      - name: Sync ROM dependencies
+        run: |
+          source build/envsetup.sh
+          breakfast ${{ inputs.DEVICE_NAME }}
+        working-directory: workspace
+
+      - name: Build ROM
+        run: |
+          source build/envsetup.sh
+          export ALLOW_MISSING_DEPENDENCIES=true
+          lunch lineage_${{ inputs.DEVICE_NAME }}-userdebug
+          make bacon -j$(nproc --all)
+        working-directory: workspace
+
+      - name: Upload to Release
+        uses: actions/upload-artifact@v3
+        with:
+          name: ROM-${{ inputs.DEVICE_NAME }}-${{ inputs.MANIFEST_BRANCH }}
+          path: |
+            workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
+            !workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
