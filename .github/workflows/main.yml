@@ -2,22 +2,6 @@ name: Build Android ROM
 
 on:
   workflow_dispatch:
-    inputs:
-      DEVICE_NAME:
-        description: Codename of the device
-        required: true
-      DEVICE_PATH:
-        description: Path to the device tree
-        required: true
-        default: device/<vendor>/<device>
-      KERNEL_PATH:
-        description: Path to kernel source
-        required: true
-        default: kernel/<vendor>/<device>
-      VENDOR_PATH:
-        description: Path to vendor tree
-        required: true
-        default: vendor/<vendor>/<device>
 
 jobs:
   build-rom:
@@ -39,7 +23,6 @@ jobs:
 
       - name: Initialize repo
         run: |
-          # Defina diretamente o branch desejado
           MANIFEST_BRANCH="17.1"
           if [[ "$MANIFEST_BRANCH" =~ ^[0-9]+\.[0-9]+$ ]]; then
             repo init --depth=1 -u https://github.com/LineageOS/android.git -b lineage-${MANIFEST_BRANCH}
@@ -55,7 +38,6 @@ jobs:
 
       - name: Clone device, kernel, and vendor
         run: |
-          # Defina diretamente as URLs e branches para o device tree, kernel e vendor
           DEVICE_TREE_URL="https://github.com/TeamWin/android_device_motorola_pettyl"
           KERNEL_URL="https://github.com/MotorolaMobilityLLC/kernel-msm"
           VENDOR_URL="https://github.com/AndroidBlobs/vendor_motorola_pettyl"
@@ -65,27 +47,27 @@ jobs:
           VENDOR_BRANCH="8-OPGS28.54-53-8-7-0814d-release-keys"
 
           # Clonar repositórios com os branches específicos
-          git clone -b $DEVICE_TREE_BRANCH $DEVICE_TREE_URL workspace/${{ inputs.DEVICE_PATH }}
-          git clone -b $KERNEL_BRANCH $KERNEL_URL workspace/${{ inputs.KERNEL_PATH }}
-          git clone -b $VENDOR_BRANCH $VENDOR_URL workspace/${{ inputs.VENDOR_PATH }}
+          git clone -b $DEVICE_TREE_BRANCH $DEVICE_TREE_URL workspace/device/motorola/pettyl
+          git clone -b $KERNEL_BRANCH $KERNEL_URL workspace/kernel/motorola/pettyl
+          git clone -b $VENDOR_BRANCH $VENDOR_URL workspace/vendor/motorola/pettyl
         working-directory: workspace
 
       - name: Sync ROM dependencies
         run: |
           source build/envsetup.sh
-          breakfast ${{ inputs.DEVICE_NAME }}
+          breakfast pettyl
         working-directory: workspace
 
       - name: Build ROM
         run: |
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
-          lunch lineage_${{ inputs.DEVICE_NAME }}-userdebug
+          lunch lineage_pettyl-userdebug
           make bacon -j$(nproc --all)
         working-directory: workspace
 
       - name: Upload to Release
         uses: actions/upload-artifact@v3
         with:
-          name: ROM-${{ inputs.DEVICE_NAME }}-${MANIFEST_BRANCH}
-          path: workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
+          name: ROM-pettyl-17.1
+          path: workspace/out/target/product/pettyl/*.zip
