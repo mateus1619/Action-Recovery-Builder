@@ -21,7 +21,7 @@ jobs:
         run: |
           mkdir -p workspace
 
-      - name: Initialize repo
+      - name: Initialize repo for LineageOS
         run: |
           MANIFEST_BRANCH="17.1"
           if [[ "$MANIFEST_BRANCH" =~ ^[0-9]+\.[0-9]+$ ]]; then
@@ -32,7 +32,7 @@ jobs:
           fi
         working-directory: workspace
 
-      - name: Sync source
+      - name: Sync source for LineageOS
         run: repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
         working-directory: workspace
 
