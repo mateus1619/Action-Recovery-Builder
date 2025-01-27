@@ -5,35 +5,50 @@ on:
 
 jobs:
   build-rom:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      # Cleanup The Actions Workspace Using Custom Composite Run Actions
+      - name: Cleanup
+        uses: rokibhasansagar/slimhub_actions@main
+        # That's it! Now use your normal steps
+
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 24
 
       - name: Set up environment
         run: |
           sudo apt update && sudo apt install -y \
-            bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick \
-            lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev \
-            libxml2 libxml2-utils lzop openjdk-11-jdk pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+          bc bison python-is-python3 libwxgtk3.0-dev build-essential ccache curl flex g++-multilib gcc-multilib git git-lfs gnupg gperf imagemagick libncurses5 lib32readline-dev lib32z1-dev libelf-dev liblz4-tool lz4 libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+          sudo add-apt-repository universe
 
-      - name: Create workspace directory
+      - name: Install repo
         run: |
-          mkdir -p workspace
+          mkdir ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          sudo ln -sf ~/bin/repo /usr/bin/repo
 
-      - name: Initialize repo for LineageOS
+      - name: Initialize repo
         run: |
+          export USE_CCACHE=1
+          export CCACHE_EXEC=/usr/bin/ccache
+          ccache -M 70G
+          ccache -o compression=true
           MANIFEST_BRANCH="17.1"
-          if [[ "$MANIFEST_BRANCH" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            repo init --depth=1 -u https://github.com/LineageOS/android.git -b lineage-${MANIFEST_BRANCH}
-          else
-            echo "Invalid MANIFEST_BRANCH provided" >&2
-            exit 1
-          fi
-        working-directory: workspace
+          mkdir workspace
+          cd workspace
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+          git lfs install
+          repo init --depth=1 -u https://github.com/LineageOS/android.git -b lineage-${MANIFEST_BRANCH} --git-lfs --no-clone-bundle
 
       - name: Sync source for LineageOS
-        run: repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
+        run: repo sync -c -j$(nproc --all)
         working-directory: workspace
 
       - name: Clone device, kernel, and vendor
@@ -62,8 +77,8 @@ jobs:
         run: |
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
-          lunch lineage_pettyl-userdebug
-          make bacon -j$(nproc --all)
+          croot
+          brunch bacon
         working-directory: workspace
 
       - name: Upload to Release
