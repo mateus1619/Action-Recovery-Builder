@@ -1,11 +1,4 @@
-Para modificar o arquivo `rom_build.yml` para compilar uma ROM Lineage, você pode fazer as seguintes alterações:
 
-1. Atualizar o repositório de inicialização para usar o repositório do Lineage.
-2. Ajustar os comandos de build para seguir o processo de build do Lineage.
-
-Aqui está o arquivo `rom_build.yml` atualizado:
-
-```yaml
 name: Build LineageOS ROM
 
 on:
@@ -19,6 +12,7 @@ on:
         - 20.0
         - 19.1
         - 18.1
+        - 17.1
       DEVICE_NAME:
         description: Codename of the device
         required: true
@@ -98,6 +92,3 @@ jobs:
           path: |
             workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
             !workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
-```
-
-Esse arquivo modifica o workflow para inicializar o repositório do LineageOS e ajusta os comandos de build para seguir o processo de build do LineageOS.
