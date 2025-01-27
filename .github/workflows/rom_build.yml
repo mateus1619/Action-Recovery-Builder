@@ -1,14 +1,24 @@
-name: Build Android ROM
+Para modificar o arquivo `rom_build.yml` para compilar uma ROM Lineage, você pode fazer as seguintes alterações:
+
+1. Atualizar o repositório de inicialização para usar o repositório do Lineage.
+2. Ajustar os comandos de build para seguir o processo de build do Lineage.
+
+Aqui está o arquivo `rom_build.yml` atualizado:
+
+```yaml
+name: Build LineageOS ROM
 
 on:
   workflow_dispatch:
     inputs:
       MANIFEST_BRANCH:
-        description: Select the Android version
+        description: Select the LineageOS version
         required: true
-        default: 17.1
+        default: 20.0
         options:
-        - 17.1
+        - 20.0
+        - 19.1
+        - 18.1
       DEVICE_NAME:
         description: Codename of the device
         required: true
@@ -51,7 +61,7 @@ jobs:
       - name: Initialize repo
         run: |
           if [[ "${{ inputs.MANIFEST_BRANCH }}" =~ ^[0-9]+\.[0-9]+$ ]]; then
-            repo init --depth=1 -u https://github.com/lineageos/android.git -b lineage-${{ inputs.MANIFEST_BRANCH }}
+            repo init --depth=1 -u https://github.com/LineageOS/android.git -b lineage-${{ inputs.MANIFEST_BRANCH }}
           else
             echo "Invalid MANIFEST_BRANCH provided" >&2
             exit 1
@@ -78,8 +88,7 @@ jobs:
         run: |
           source build/envsetup.sh
           export ALLOW_MISSING_DEPENDENCIES=true
-          lunch lineage_${{ inputs.DEVICE_NAME }}-userdebug
-          make bacon -j$(nproc --all)
+          brunch ${{ inputs.DEVICE_NAME }}
         working-directory: workspace
 
       - name: Upload to Release
@@ -89,3 +98,6 @@ jobs:
           path: |
             workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
             !workspace/out/target/product/${{ inputs.DEVICE_NAME }}/*.zip
+```
+
+Esse arquivo modifica o workflow para inicializar o repositório do LineageOS e ajusta os comandos de build para seguir o processo de build do LineageOS.
